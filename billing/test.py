@@ -258,3 +258,5 @@ class DeleteRestrictionIntegrationTests(Lab3BaseAPITestCase):
             {status.HTTP_400_BAD_REQUEST, status.HTTP_409_CONFLICT},
         )
         self.assertTrue(Barrel.objects.filter(id=barrel.id).exists())
+
+#comentario para comprobar el workflow
