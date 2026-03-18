@@ -1,0 +1,70 @@
+name: PR Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: billing_db
+          POSTGRES_USER: billing_user
+          POSTGRES_PASSWORD: billing_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U billing_user -d billing_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DJANGO_SECRET_KEY: ci-secret-key
+      DJANGO_DEBUG: "0"
+      POSTGRES_DB: billing_db
+      POSTGRES_USER: billing_user
+      POSTGRES_PASSWORD: billing_pass
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install coverage
+
+      - name: Run migrations
+        run: python manage.py migrate --noinput
+
+      - name: Run tests with coverage
+        run: |
+          coverage erase
+          coverage run manage.py test
+
+      - name: Check coverage for views
+        run: coverage report --include="*/views.py,*/views/*.py" --fail-under=40
+
+      - name: Check coverage for models
+        run: coverage report --include="*/models.py,*/models/*.py" --fail-under=40
+
+      - name: Check coverage for serializers
+        run: coverage report --include="*/serializers.py,*/serializers/*.py" --fail-under=40
+
+      - name: Full coverage report
+        run: coverage report
